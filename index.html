@@ -1,576 +1,82 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Palpites realistas de futebol hoje e amanhã com porcentagens (Brasileirão, Libertadores, Copa do Brasil), 5 milhar por estado. Atualiza diariamente!" />
-  <title>XerifãoJB - Palpites Inteligentes Hoje + Amanhã + 5 Milhar ⚽</title>
+// Função auxiliar Poisson (mantida igual)
+function poissonProb(lambda, k) {
+  let p = Math.exp(-lambda);
+  let term = 1;
+  for (let i = 0; i < k; i++) {
+    term *= lambda / (i + 1);
+    p += term;
+  }
+  return p;
+}
 
-  <!-- Monetag meta (mantido) -->
-  <meta name="monetag" content="d16a8e926c3e6d45fe92772cadde0de3" />
+// Calcula probabilidades (mantida, mas agora retorna também o palpite sorteado)
+function calculateProbabilities(homeTeam, awayTeam, leagueId) {
+  // ... todo o código anterior de cálculo de lambdaHome e lambdaAway ...
+  // (copie exatamente o que você já tinha até o cálculo de pHome, pDraw, pAway, pOver, pUnder)
 
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: #0a0a0a;
-      color: #e0e0e0;
-      line-height: 1.5;
-      min-height: 100vh;
-      padding-bottom: 110px;
-    }
+  // Aqui vamos decidir o palpite final com sorte
+  const rand = Math.random() * 100; // número entre 0 e 100
 
-    header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      background: linear-gradient(135deg, #111, #1a1a1a);
-      padding: 0.9rem 1rem;
-      z-index: 1000;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-    }
-    .sheriff-hat { font-size: 2rem; }
-    .header-title {
-      font-size: clamp(1.2rem, 4.5vw, 1.4rem);
-      font-weight: 700;
-      background: linear-gradient(90deg, #00ff9d, #00cc7a);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+  let resultado;
+  let probEscolhida;
 
-    .data-atual {
-      text-align: center;
-      padding: 0.5rem;
-      background: #1a1a1a;
-      font-size: 0.9rem;
-      color: #aaa;
-      position: sticky;
-      top: 58px;
-      z-index: 999;
-      border-bottom: 1px solid #222;
-    }
+  if (rand < pHome) {
+    resultado = `Vitória do ${homeTeam}`;
+    probEscolhida = pHome;
+  } else if (rand < pHome + pDraw) {
+    resultado = "Empate";
+    probEscolhida = pDraw;
+  } else {
+    resultado = `Vitória do ${awayTeam}`;
+    probEscolhida = pAway;
+  }
 
-    main {
-      margin: 5.5rem 0.8rem 7rem;
-      padding: 0 0.4rem;
-    }
+  return {
+    pHome,
+    pDraw,
+    pAway,
+    pOver,
+    pUnder,
+    palpiteFinal: resultado,
+    probDoPalpite: probEscolhida
+  };
+}
 
-    .palpites-container {
-      display: grid;
-      gap: 1.4rem;
-      margin-bottom: 1.5rem;
-    }
+// Dentro do loop de renderização (substitua o trecho que cria o HTML do jogo)
+const probs = calculateProbabilities(timeA, timeB, leagueId);
 
-    .palpites-box {
-      background: linear-gradient(135deg, #1a1a1a, #222);
-      border-radius: 0.9rem;
-      padding: 1.2rem 1rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-      border: 1px solid #2a2a2a;
-    }
-    .palpites-box h3 {
-      color: #00ff9d;
-      font-size: clamp(1.2rem, 4vw, 1.4rem);
-      margin-bottom: 0.8rem;
-      text-align: center;
-    }
+htmlHoje += `
+  <div class="jogo-item">
+    <div class="jogo-time">${liga} • ${hora} ${status}</div>
+    <div class="jogo-times">${timeA} × ${timeB}</div>
 
-    .select-campeonato {
-      width: 100%;
-      max-width: 300px;
-      margin: 0 auto 0.8rem;
-      display: block;
-      background: #1e1e1e;
-      color: white;
-      border: 1px solid #444;
-      padding: 0.65rem 0.8rem 0.65rem 2.2rem;
-      font-size: clamp(0.92rem, 3.3vw, 0.98rem);
-      border-radius: 0.65rem;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: left 0.7rem center, right 0.7rem center;
-    }
-
-    .atualizar-btn {
-      background: #333;
-      color: #00ff9d;
-      border: none;
-      padding: 0.7rem 1.4rem;
-      border-radius: 2rem;
-      margin: 0.6rem auto 1rem;
-      display: block;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .jogos-hoje, .jogos-amanha {
-      background: #161616;
-      border-radius: 10px;
-      padding: 1rem;
-      box-shadow: 0 5px 16px rgba(0,0,0,0.5);
-      margin-top: 1rem;
-    }
-    .jogo-item {
-      background: #222;
-      border-radius: 8px;
-      padding: 0.9rem;
-      margin-bottom: 0.8rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      border-left: 3px solid #00ff9d;
-    }
-    .jogo-time { font-weight: 600; color: #aaa; font-size: 0.85rem; }
-    .jogo-times { font-size: 1.05rem; font-weight: 700; }
-
-    .probabilidades {
-      display: flex;
-      justify-content: space-between;
-      margin: 0.8rem 0;
-      gap: 0.4rem;
-    }
-    .prob-item { text-align: center; flex: 1; }
-    .prob-bar {
-      height: 8px;
-      background: #444;
-      border-radius: 4px;
-      margin: 4px 0;
-      overflow: hidden;
-      position: relative;
-    }
-    .prob-fill {
-      height: 100%;
-      transition: width 0.6s ease;
-    }
-    .vit-mandante .prob-fill { background: linear-gradient(to right, #00ff9d, #00b36b); }
-    .empate .prob-fill { background: linear-gradient(to right, #ffaa00, #cc8800); }
-    .vit-visitante .prob-fill { background: linear-gradient(to right, #ff4444, #cc0000); }
-    .prob-text { font-size: 0.85rem; font-weight: 600; }
-
-    .over-under {
-      text-align: center;
-      margin-top: 0.6rem;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    .over { color: #00ff9d; }
-    .under { color: #ffaa00; }
-
-    .loading, .erro {
-      text-align: center;
-      padding: 1.5rem;
-      color: #888;
-      font-size: 0.9rem;
-    }
-    .erro { color: #ff6b6b; }
-
-    .bottom-bar {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: linear-gradient(135deg, #000, #111);
-      padding: 0.9rem 1rem;
-      display: flex;
-      justify-content: space-around;
-      box-shadow: 0 -5px 16px rgba(0,0,0,0.8);
-      z-index: 1000;
-      border-top: 1px solid #222;
-    }
-    .bottom-btn {
-      background: linear-gradient(135deg, #00ff9d, #00cc7a);
-      color: #000;
-      font-weight: 700;
-      padding: 0.8rem 1.2rem;
-      border-radius: 2.5rem;
-      text-align: center;
-      flex: 1;
-      margin: 0 0.5rem;
-      max-width: 200px;
-      box-shadow: 0 3px 12px rgba(0,255,157,0.3);
-      transition: all 0.15s;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      text-decoration: none;
-    }
-    .bottom-btn:active { transform: scale(0.97); }
-    .bottom-btn.bancas {
-      background: linear-gradient(135deg, #ff4444, #cc0000);
-      color: #fff;
-      box-shadow: 0 3px 12px rgba(255,68,68,0.35);
-    }
-
-    .ad-zone, .monetag-carousel {
-      margin: 1.2rem 0;
-      min-height: 90px;
-      background: #1a1a1a;
-      border-radius: 0.9rem;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      text-align: center;
-    }
-
-    @media (min-width: 768px) {
-      main { max-width: 900px; margin: 6.5rem auto 7.5rem; }
-      .select-campeonato { max-width: 340px; font-size: 1.02rem; padding: 0.75rem 1rem 0.75rem 2.5rem; }
-      .probabilidades { gap: 0.6rem; }
-      .prob-text { font-size: 0.95rem; }
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <span class="sheriff-hat">🤠</span>
-    <div class="header-title">XerifãoJB</div>
-  </header>
-
-  <div class="data-atual">
-    Atualização: <span id="dataAtual"></span>
-  </div>
-
-  <div class="monetag-carousel">
-    <script async src="https://jsn.monetag.com/10340859.js"></script>
-  </div>
-
-  <div class="ad-zone">
-    <script src="https://quge5.com/88/tag.min.js" data-zone="208146" async data-cfasync="false"></script>
-  </div>
-
-  <main>
-    <div class="palpites-container">
-
-      <!-- Palpites de Futebol Hoje -->
-      <div class="palpites-box">
-        <h3>Palpites de Futebol Hoje</h3>
-        
-        <select id="campeonatoSelect" class="select-campeonato">
-          <option value="">🌍 Todos</option>
-          <option value="13">🏆 Libertadores</option>
-          <option value="11">🌎 Sul-Americana</option>
-          <option value="85">🇧🇷 Copa do Brasil</option>
-          <option value="71">🇧🇷 Série A</option>
-          <option value="72">🇧🇷 Série B</option>
-          <option value="89">🇧🇷 Paulistão</option>
-          <option value="88">🇧🇷 Carioca</option>
-          <option value="87">🇧🇷 Mineiro</option>
-          <option value="90">🇧🇷 Gaúcho</option>
-          <option value="91">🇧🇷 Paranaense</option>
-          <option value="93">🇧🇷 Catarinense</option>
-          <option value="94">🇧🇷 Baiano</option>
-          <option value="95">🇧🇷 Cearense</option>
-          <option value="96">🇧🇷 Goiano</option>
-        </select>
-
-        <button onclick="carregarJogos()" class="atualizar-btn">Atualizar jogos</button>
-
-        <div id="jogosHoje" class="jogos-hoje">
-          <div class="loading">Buscando jogos de hoje...</div>
-        </div>
+    <div class="probabilidades">
+      <div class="prob-item vit-mandante">
+        <div class="prob-text">Vitória ${timeA}</div>
+        <div class="prob-bar"><div class="prob-fill" style="width:${probs.pHome}%"></div></div>
+        <div>${probs.pHome}%</div>
       </div>
-
-      <!-- Próximos Jogos - Amanhã -->
-      <div class="palpites-box">
-        <h3>Próximos Jogos - Amanhã</h3>
-        <div id="jogosAmanha" class="jogos-amanha">
-          <div class="loading">Buscando jogos de amanhã...</div>
-        </div>
+      <div class="prob-item empate">
+        <div class="prob-text">Empate</div>
+        <div class="prob-bar"><div class="prob-fill" style="width:${probs.pDraw}%"></div></div>
+        <div>${probs.pDraw}%</div>
       </div>
-
-      <!-- Palpites 5 Milhar -->
-      <div class="palpites-box">
-        <h3>Palpites do Dia - 5 Milhar</h3>
-        <select id="estadoSelect" class="estado-select">
-          <option value="">Selecione seu estado</option>
-          <option value="Acre">Acre</option>
-          <option value="Alagoas">Alagoas</option>
-          <option value="Amapá">Amapá</option>
-          <option value="Amazonas">Amazonas</option>
-          <option value="Bahia">Bahia</option>
-          <option value="Ceará">Ceará</option>
-          <option value="Distrito Federal">Distrito Federal</option>
-          <option value="Espírito Santo">Espírito Santo</option>
-          <option value="Goiás">Goiás</option>
-          <option value="Maranhão">Maranhão</option>
-          <option value="Mato Grosso">Mato Grosso</option>
-          <option value="Mato Grosso do Sul">Mato Grosso do Sul</option>
-          <option value="Minas Gerais">Minas Gerais</option>
-          <option value="Pará">Pará</option>
-          <option value="Paraíba">Paraíba</option>
-          <option value="Paraná">Paraná</option>
-          <option value="Pernambuco">Pernambuco</option>
-          <option value="Piauí">Piauí</option>
-          <option value="Rio de Janeiro">Rio de Janeiro</option>
-          <option value="Rio Grande do Norte">Rio Grande do Norte</option>
-          <option value="Rio Grande do Sul">Rio Grande do Sul</option>
-          <option value="Rondônia">Rondônia</option>
-          <option value="Roraima">Roraima</option>
-          <option value="Santa Catarina">Santa Catarina</option>
-          <option value="São Paulo">São Paulo</option>
-          <option value="Sergipe">Sergipe</option>
-          <option value="Tocantins">Tocantins</option>
-        </select>
-
-        <div id="palpiteResultado" style="display:none;">
-          <div class="palpites-numeros" id="palpitesDisplay">— — — — —</div>
-          <div class="data-info" id="dataInfo"></div>
-        </div>
+      <div class="prob-item vit-visitante">
+        <div class="prob-text">Vitória ${timeB}</div>
+        <div class="prob-bar"><div class="prob-fill" style="width:${probs.pAway}%"></div></div>
+        <div>${probs.pAway}%</div>
       </div>
-
     </div>
 
-    <div class="ad-zone" style="margin:1.5rem 0 5rem;">
-      <script src="https://quge5.com/88/tag.min.js" data-zone="208146" async data-cfasync="false"></script>
+    <div class="over-under">
+      <span class="${probs.pOver > 50 ? 'over' : 'under'}">Over 2.5 gols: ${probs.pOver}%</span> • 
+      <span class="${probs.pUnder > 50 ? 'under' : 'over'}">Under 2.5 gols: ${probs.pUnder}%</span>
     </div>
-  </main>
 
-  <div class="bottom-bar">
-    <a class="bottom-btn" href="https://otieu.com/4/10340859" target="_blank" rel="noopener noreferrer"><span>📲</span> Grupo WhatsApp</a>
-    <a class="bottom-btn bancas" href="https://www.superbancas.org" target="_blank" rel="noopener noreferrer"><span>💰</span> Bancas de Jogos</a>
+    <!-- Palpite final com sorte -->
+    <div style="text-align:center; margin-top:12px; font-size:1.1rem; font-weight:700; color:#00ff9d;">
+      Palpite do dia: <strong>${probs.palpiteFinal}</strong> 
+      <span style="color:#aaa; font-size:0.85rem;">(${probs.probDoPalpite}% de chance)</span>
+    </div>
   </div>
-
-  <!-- Scripts -->
-  <script>
-    const API_KEY = "0da4bc37063d80caffcfedbbfa707e4a";
-
-    // Data atual
-    document.getElementById('dataAtual').innerText = new Date().toLocaleDateString('pt-BR', {
-      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
-    });
-
-    // Função Poisson
-    function poissonProb(lambda, k) {
-      let p = Math.exp(-lambda);
-      let term = 1;
-      for (let i = 0; i < k; i++) {
-        term *= lambda / (i + 1);
-        p += term;
-      }
-      return p;
-    }
-
-    // Cálculo de probabilidades mais simples e realista
-    function calculateProbabilities(homeTeam, awayTeam) {
-      // Valores base realistas
-      let lambdaHome = 1.38;
-      let lambdaAway = 1.12;
-
-      // Variação controlada
-      const seed = (homeTeam + awayTeam + new Date().toDateString()).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-      const variation = (seed % 100) / 100;
-
-      lambdaHome += (variation - 0.5) * 0.4;
-      lambdaAway += (0.5 - variation) * 0.35;
-
-      lambdaHome = Math.max(0.85, Math.min(2.2, lambdaHome));
-      lambdaAway = Math.max(0.7, Math.min(2.0, lambdaAway));
-
-      let pHome = 0, pDraw = 0, pAway = 0;
-      let over25 = 0;
-      const maxG = 7;
-
-      for (let h = 0; h <= maxG; h++) {
-        for (let a = 0; a <= maxG; a++) {
-          const prob = poissonProb(lambdaHome, h) * poissonProb(lambdaAway, a);
-          if (h > a) pHome += prob;
-          else if (h === a) pDraw += prob;
-          else pAway += prob;
-          if (h + a > 2.5) over25 += prob;
-        }
-      }
-
-      const total = pHome + pDraw + pAway;
-      pHome = Math.round((pHome / total) * 100);
-      pDraw = Math.round((pDraw / total) * 100);
-      pAway = 100 - pHome - pDraw;
-
-      const pOver = Math.round(over25 * 100);
-      const pUnder = 100 - pOver;
-
-      return { pHome, pDraw, pAway, pOver, pUnder };
-    }
-
-    async function carregarJogos() {
-      const select = document.getElementById('campeonatoSelect');
-      const leagueId = select.value;
-      const hoje = new Date().toISOString().split('T')[0];
-      const containerHoje = document.getElementById('jogosHoje');
-      const containerAmanha = document.getElementById('jogosAmanha');
-
-      containerHoje.innerHTML = '<div class="loading">Buscando jogos de hoje...</div>';
-      containerAmanha.innerHTML = '<div class="loading">Buscando jogos de amanhã...</div>';
-
-      let urlHoje = `https://v3.football.api-sports.io/fixtures?date=${hoje}`;
-      if (leagueId) urlHoje += `&league=${leagueId}`;
-
-      const amanha = new Date();
-      amanha.setDate(amanha.getDate() + 1);
-      const dataAmanha = amanha.toISOString().split('T')[0];
-      let urlAmanha = `https://v3.football.api-sports.io/fixtures?date=${dataAmanha}`;
-      if (leagueId) urlAmanha += `&league=${leagueId}`;
-
-      try {
-        // Hoje
-        const resHoje = await fetch(urlHoje, {
-          headers: { 'x-rapidapi-key': API_KEY, 'x-rapidapi-host': 'v3.football.api-sports.io' }
-        });
-        const dataHoje = await resHoje.json();
-        const jogosHoje = dataHoje.response || [];
-
-        let htmlHoje = '';
-        if (jogosHoje.length === 0) {
-          htmlHoje = '<div class="erro">Nenhum jogo hoje neste campeonato.</div>';
-        } else {
-          jogosHoje.slice(0, 8).forEach(jogo => {
-            const timeA = jogo.teams.home.name || 'TBD';
-            const timeB = jogo.teams.away.name || 'TBD';
-            const liga = jogo.league.name || 'Desconhecido';
-            const hora = new Date(jogo.fixture.date).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            const status = jogo.fixture.status.short || '';
-
-            const probs = calculateProbabilities(timeA, timeB);
-
-            htmlHoje += `
-              <div class="jogo-item">
-                <div class="jogo-time">${liga} • ${hora} ${status}</div>
-                <div class="jogo-times">${timeA} × ${timeB}</div>
-                <div class="probabilidades">
-                  <div class="prob-item vit-mandante">
-                    <div class="prob-text">Vitória ${timeA}</div>
-                    <div class="prob-bar"><div class="prob-fill" style="width:${probs.pHome}%"></div></div>
-                    <div>${probs.pHome}%</div>
-                  </div>
-                  <div class="prob-item empate">
-                    <div class="prob-text">Empate</div>
-                    <div class="prob-bar"><div class="prob-fill" style="width:${probs.pDraw}%"></div></div>
-                    <div>${probs.pDraw}%</div>
-                  </div>
-                  <div class="prob-item vit-visitante">
-                    <div class="prob-text">Vitória ${timeB}</div>
-                    <div class="prob-bar"><div class="prob-fill" style="width:${probs.pAway}%"></div></div>
-                    <div>${probs.pAway}%</div>
-                  </div>
-                </div>
-                <div class="over-under">
-                  <span class="${probs.pOver > 50 ? 'over' : 'under'}">Over 2.5: ${probs.pOver}%</span> • 
-                  <span class="${probs.pUnder > 50 ? 'under' : 'over'}">Under 2.5: ${probs.pUnder}%</span>
-                </div>
-              </div>
-            `;
-          });
-        }
-        containerHoje.innerHTML = htmlHoje;
-
-        // Amanhã
-        const resAmanha = await fetch(urlAmanha, {
-          headers: { 'x-rapidapi-key': API_KEY, 'x-rapidapi-host': 'v3.football.api-sports.io' }
-        });
-        const dataAmanha = await resAmanha.json();
-        const jogosAmanha = dataAmanha.response || [];
-
-        let htmlAmanha = '';
-        if (jogosAmanha.length === 0) {
-          htmlAmanha = '<div class="erro">Nenhum jogo amanhã neste campeonato.</div>';
-        } else {
-          jogosAmanha.slice(0, 8).forEach(jogo => {
-            const timeA = jogo.teams.home.name || 'TBD';
-            const timeB = jogo.teams.away.name || 'TBD';
-            const liga = jogo.league.name || 'Desconhecido';
-            const hora = new Date(jogo.fixture.date).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            const status = jogo.fixture.status.short || '';
-
-            const probs = calculateProbabilities(timeA, timeB);
-
-            htmlAmanha += `
-              <div class="jogo-item">
-                <div class="jogo-time">${liga} • ${hora} ${status}</div>
-                <div class="jogo-times">${timeA} × ${timeB}</div>
-                <div class="probabilidades">
-                  <div class="prob-item vit-mandante">
-                    <div class="prob-text">Vitória ${timeA}</div>
-                    <div class="prob-bar"><div class="prob-fill" style="width:${probs.pHome}%"></div></div>
-                    <div>${probs.pHome}%</div>
-                  </div>
-                  <div class="prob-item empate">
-                    <div class="prob-text">Empate</div>
-                    <div class="prob-bar"><div class="prob-fill" style="width:${probs.pDraw}%"></div></div>
-                    <div>${probs.pDraw}%</div>
-                  </div>
-                  <div class="prob-item vit-visitante">
-                    <div class="prob-text">Vitória ${timeB}</div>
-                    <div class="prob-bar"><div class="prob-fill" style="width:${probs.pAway}%"></div></div>
-                    <div>${probs.pAway}%</div>
-                  </div>
-                </div>
-                <div class="over-under">
-                  <span class="${probs.pOver > 50 ? 'over' : 'under'}">Over 2.5: ${probs.pOver}%</span> • 
-                  <span class="${probs.pUnder > 50 ? 'under' : 'over'}">Under 2.5: ${probs.pUnder}%</span>
-                </div>
-              </div>
-            `;
-          });
-        }
-        containerAmanha.innerHTML = htmlAmanha;
-
-      } catch (err) {
-        containerHoje.innerHTML = `<div class="erro">Erro ao carregar jogos.<br>${err.message}</div>`;
-        containerAmanha.innerHTML = `<div class="erro">Erro ao carregar jogos.<br>${err.message}</div>`;
-      }
-    }
-
-    // Carrega automaticamente ao abrir a página
-    window.addEventListener('load', carregarJogos);
-
-    // Palpites 5 milhar (simples, pode melhorar depois)
-    function mostrarPalpite() {
-      const select = document.getElementById('estadoSelect');
-      const estado = select.value.trim();
-      const resultadoDiv = document.getElementById('palpiteResultado');
-      const display = document.getElementById('palpitesDisplay');
-      const dataInfo = document.getElementById('dataInfo');
-
-      if (!estado) {
-        resultadoDiv.style.display = 'none';
-        return;
-      }
-
-      const hoje = new Date().toISOString().split('T')[0];
-      const chave = `palpite_${hoje}_${estado}`;
-
-      let palpite = localStorage.getItem(chave);
-
-      if (!palpite) {
-        let numeros = [];
-        for (let i = 0; i < 5; i++) {
-          let num = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-          numeros.push(num);
-        }
-        palpite = numeros.join('  ');
-        localStorage.setItem(chave, palpite);
-      }
-
-      display.innerText = palpite;
-      dataInfo.innerText = `Gerado para hoje • ${hoje.split('-').reverse().join('/')}`;
-      resultadoDiv.style.display = 'block';
-
-      localStorage.setItem('ultimoEstado', estado);
-    }
-
-    // Carrega último estado escolhido
-    window.addEventListener('load', () => {
-      const ultimo = localStorage.getItem('ultimoEstado');
-      if (ultimo) {
-        document.getElementById('estadoSelect').value = ultimo;
-        mostrarPalpite();
-      }
-    });
-  </script>
-
-</body>
-</html>
+`;
