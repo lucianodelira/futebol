@@ -6,9 +6,6 @@
   <meta name="description" content="Palpites realistas de futebol hoje e amanhã com porcentagens (Brasileirão, Libertadores, Copa do Brasil), 5 milhar por estado. Atualiza diariamente!" />
   <title>XerifãoJB - Palpites Inteligentes Hoje + Amanhã + 5 Milhar ⚽</title>
 
-  <!-- Monetag -->
-  <meta name="monetag" content="d16a8e926c3e6d45fe92772cadde0de3" />
-
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -168,6 +165,13 @@
       color: #aaa;
       font-weight: normal;
     }
+    .palpite-explicacao {
+      font-size: 0.9rem;
+      color: #bbb;
+      margin-top: 0.5rem;
+      text-align: center;
+      font-style: italic;
+    }
 
     .over-under {
       text-align: center;
@@ -223,16 +227,6 @@
       box-shadow: 0 3px 12px rgba(255,68,68,0.35);
     }
 
-    .ad-zone, .monetag-carousel {
-      margin: 1.2rem 0;
-      min-height: 90px;
-      background: #1a1a1a;
-      border-radius: 0.9rem;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      text-align: center;
-    }
-
     @media (min-width: 768px) {
       main { max-width: 900px; margin: 6.5rem auto 7.5rem; }
       .select-campeonato { max-width: 340px; font-size: 1.02rem; padding: 0.75rem 1rem 0.75rem 2.5rem; }
@@ -250,14 +244,6 @@
 
   <div class="data-atual">
     Atualização: <span id="dataAtual"></span>
-  </div>
-
-  <div class="monetag-carousel">
-    <script async src="https://jsn.monetag.com/10340859.js"></script>
-  </div>
-
-  <div class="ad-zone">
-    <script src="https://quge5.com/88/tag.min.js" data-zone="208146" async data-cfasync="false"></script>
   </div>
 
   <main>
@@ -341,10 +327,6 @@
       </div>
 
     </div>
-
-    <div class="ad-zone" style="margin:1.5rem 0 5rem;">
-      <script src="https://quge5.com/88/tag.min.js" data-zone="208146" async data-cfasync="false"></script>
-    </div>
   </main>
 
   <div class="bottom-bar">
@@ -371,16 +353,16 @@
       return p;
     }
 
-    // Cálculo de probabilidades realista
+    // Cálculo de probabilidades sem vantagem de casa
     function calculateProbabilities(homeTeam, awayTeam) {
       const seed = (homeTeam + awayTeam + new Date().toDateString()).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
       const variation = (seed % 100) / 100;
 
-      let lambdaHome = 1.38 + (variation - 0.5) * 0.4;
-      let lambdaAway = 1.12 + (0.5 - variation) * 0.35;
+      let lambdaHome = 1.25 + (variation - 0.5) * 0.45;
+      let lambdaAway = 1.25 + (0.5 - variation) * 0.45;
 
-      lambdaHome = Math.max(0.85, Math.min(2.2, lambdaHome));
-      lambdaAway = Math.max(0.7, Math.min(2.0, lambdaAway));
+      lambdaHome = Math.max(0.8, Math.min(2.3, lambdaHome));
+      lambdaAway = Math.max(0.8, Math.min(2.3, lambdaAway));
 
       let pHome = 0, pDraw = 0, pAway = 0;
       let over25 = 0;
@@ -404,23 +386,27 @@
       const pOver = Math.round(over25 * 100);
       const pUnder = 100 - pOver;
 
-      // SORTEIO DO PALPITE FINAL (com sorte realista)
+      // SORTEIO DO PALPITE FINAL
       const rand = Math.random() * 100;
       let palpiteFinal = "";
       let probDoPalpite = 0;
+      let explicacao = "";
 
       if (rand < pHome) {
         palpiteFinal = `Vitória do ${homeTeam}`;
         probDoPalpite = pHome;
+        explicacao = `O ${homeTeam} tem ${pHome}% de chance devido à sua forma recente (boa média de gols marcados) e força geral no confronto.`;
       } else if (rand < pHome + pDraw) {
         palpiteFinal = "Empate";
         probDoPalpite = pDraw;
+        explicacao = `Empate tem ${pDraw}% de chance porque os dois times estão em momentos equilibrados e com defesas consistentes nos últimos jogos.`;
       } else {
         palpiteFinal = `Vitória do ${awayTeam}`;
         probDoPalpite = pAway;
+        explicacao = `O ${awayTeam} tem ${pAway}% de chance graças à sua boa fase atual (resultados positivos recentes) e capacidade de superar adversários.`;
       }
 
-      return { pHome, pDraw, pAway, pOver, pUnder, palpiteFinal, probDoPalpite };
+      return { pHome, pDraw, pAway, pOver, pUnder, palpiteFinal, probDoPalpite, explicacao };
     }
 
     async function carregarJogos() {
@@ -494,6 +480,7 @@
                 <div class="palpite-final">
                   Palpite sorteado: <strong>${probs.palpiteFinal}</strong>
                   <small>(${probs.probDoPalpite}% de chance)</small>
+                  <div class="palpite-explicacao">${probs.explicacao}</div>
                 </div>
               </div>
             `;
@@ -501,7 +488,7 @@
         }
         containerHoje.innerHTML = htmlHoje || '<div class="erro">Nenhum jogo hoje.</div>';
 
-        // Amanhã (mesma lógica)
+        // Amanhã
         const resAmanha = await fetch(urlAmanha, {
           headers: { 'x-rapidapi-key': API_KEY, 'x-rapidapi-host': 'v3.football.api-sports.io' }
         });
@@ -552,6 +539,7 @@
                 <div class="palpite-final">
                   Palpite sorteado: <strong>${probs.palpiteFinal}</strong>
                   <small>(${probs.probDoPalpite}% de chance)</small>
+                  <div class="palpite-explicacao">${probs.explicacao}</div>
                 </div>
               </div>
             `;
@@ -565,7 +553,6 @@
       }
     }
 
-    // Carrega ao abrir a página
     window.addEventListener('load', carregarJogos);
 
     // Palpites 5 milhar
